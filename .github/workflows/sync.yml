@@ -1,0 +1,39 @@
+name: Sync Daily Aviation Digest to GitHub Pages
+
+on:
+  schedule:
+    # Runs daily at 10:15 UTC (6:15 AM EDT), 15 mins after the Drive digest generates
+    - cron: '15 10 * * *'
+  workflow_dispatch: # Enables manual 1-click rerun anytime from the GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Pull Latest Digest HTML from Google Drive
+        run: |
+          # Fetch the latest published digest HTML from Google Drive
+          curl -L -o index.html "https://drive.google.com/u/0/uc?id=1qZe1pK9KiZ39-DrniDg9NYocR3waC8NS&export=download"
+          
+          # Verify the download contains valid HTML
+          if grep -q "<!DOCTYPE html>" index.html; then
+            echo "Successfully retrieved valid HTML digest."
+          else
+            echo "Failed to retrieve HTML from Drive" >&2
+            exit 1
+          fi
+
+      - name: Commit and Publish to GitHub Pages
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Automated update: Commercial Aviation Digest $(date +'%Y-%m-%d')" || echo "No changes detected"
+          git push
+          
